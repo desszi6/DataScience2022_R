@@ -1,0 +1,86 @@
+---
+title: "Data Science for Bionformatics - project 3"
+output:
+  html_document:
+    theme: readable
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Load libraries
+
+```{r, message = FALSE}
+library('tidyverse')
+library('ggplot2') 
+library('ggthemes') 
+library('scales')
+library('grid') 
+library('gridExtra')
+library('corrplot')
+library('ggraph') 
+library('igraph') 
+library('dplyr') 
+library('nycflights13')
+library('readr') 
+library('tibble') 
+library('tidyr')
+```
+
+# Import data
+
+```{r, message=FALSE, warning=FALSE}
+bipol<- read.table(file="bipol2.csv",TRUE,";")
+```
+
+# Explore data
+```{r}
+summary(bipol)
+head(bipol)
+```
+#3 groups of patients: people with bipolar disorder, people with depression and the control group
+#I analysed the 4 types of people( there are 2 types of people with BD -> BD I and BD II, the control group and people with depression (UD))
+#So the analysis is about the right answers from patients with different types of bipolar disorder
+
+# Extract variables
+```{r}
+type=bipol$Type
+answer=bipol$Right_answers
+```
+
+# Compare mean of right answers (BD I, BD II, Control, UD)
+```{r}
+tapply(answer, type, mean)
+```
+#null hypotesis: means of all the groups are equal / alternative hypotesis: at least 1 mean is different
+#for more than 2 groups we no longer can use t-test, that's why I used ANOVA for my 4 groups 
+#4 types of patients: 2 types of people with bipolar disorder (BDI, BDII) and people with depression(UD) and the control group
+
+# Visualization
+```{r}
+boxplot(answer~type, main="Types of people with bipolar disorder and their right answers in the test",xlab="Types of patients",col=rainbow(4))
+```
+
+# Anova
+```{r}
+results=aov(answer~type)
+summary(results)
+```
+#F-value: 39.57, p-value = 2e-16 < 0.05
+#the alternative hypotesis is accepted, because the p-value is less than 0.05
+
+# Post-hoc test
+#it gives us which groups are significantly different from each other (<0.05) with 95% confidence level
+```{r}
+TukeyHSD(results)
+```
+#BD I & BD II types are not significantly different, but all the other types are very divergent, with 95% confidence level.
+
+# Equality of variance
+```{r}
+bartlett.test(answer~type)
+```
+#the p-value is 0.02435 < 0.05, the null hypothesis in Bartlett's test states that all of the variances are equal and if we get their p-value of less than 0.05, we are able to reject the null hypothesis, so at least 2 of the types differ from each other, which is shown in the boxplot
+
