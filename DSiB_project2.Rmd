@@ -1,0 +1,154 @@
+---
+title: "Data Science for Bionformatics - project 2"
+output:
+  html_document:
+    theme: readable
+editor_options:
+  chunk_output_type: console
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+# Load libraries
+
+```{r, message = FALSE}
+library('ggplot2') 
+library('ggthemes') 
+library('scales')
+library('grid') 
+library('gridExtra')
+library('corrplot')
+library('ggraph') 
+library('igraph') 
+library('dplyr') 
+library('nycflights13')
+library('readr') 
+library('tibble') 
+library('tidyr')
+```
+
+# Import data
+
+#My assignment is dealing with data on cancer incidence. Since a cancer tumor might have thousands of genetic mutations, it's critical to distinguish between those that help the tumor grow and those that don't.Now I analyse and compare the mutation types of 2 datasets based on experiments and on assumption.
+
+```{r, message=FALSE, warning=FALSE}
+
+train <- read_csv('C:/Users/Tulajdonos/Documents/DSiB/training_variants.csv')
+test  <- read_csv('C:/Users/Tulajdonos/Documents/DSiB/test_variants.csv')
+
+```
+# Overview the data
+```{r}
+train <- train %>%
+  mutate(Gene = factor(Gene),
+         Variation = factor(Variation),
+         Class = factor(Class))
+
+test <- test %>%
+  mutate(Gene = factor(Gene),
+         Variation = factor(Variation))
+
+summary(train)
+
+print(train)
+print(test)
+```
+#calculating how many different Genes are in the train dataset -> 264 rows -> 264 different genes
+```{r}
+train %>%
+  group_by(Gene) %>%
+  summarise(th = n()) %>%
+  arrange(desc(th))
+```
+
+#calculating how many different Genes are in the test dataset -> 1397 rows -> 1397 different genes
+
+```{r}
+test %>%
+  group_by(Gene) %>%
+  summarise(th = n()) %>%
+  arrange(desc(th))
+```
+
+#we can see that the test dataset contains more data which is because they wanted to avoid hand labeling, so the test dataset contains auto-generated data too
+
+#now I want to count the different variations for each dataset
+
+```{r}
+train %>%
+  group_by(Variation) %>%
+  summarise(th = n()) %>%
+  arrange(desc(th))
+```
+#number of variations in the train dataset = 2996
+
+```{r}
+test %>%
+  group_by(Variation) %>%
+  summarise(th = n()) %>%
+  arrange(desc(th))
+```
+#number of variations in the train dataset = 5628
+
+# Visualization
+
+#checking the distribution of Class from the train dataset
+
+```{r}
+train %>%
+  ggplot(aes(Class)) +
+  geom_bar(fill = "#FF6600")
+```
+
+#the class 3,8,9 have the lowest frequency value and apparently class 7 stands out, so it's the most common one while the remaining classes can be classified as medium frequent classes
+
+
+#I want to visualize how the most common genes are distributed:
+
+```{r}
+freq_gene <- train %>%
+  group_by(Gene) %>%
+  summarise(th = n()) %>%
+  filter(th > 25)
+
+freq_gene %>%
+  ggplot(aes(reorder(Gene, -th), th)) +
+  geom_point(size = 3,color='darkblue') +
+  ggtitle("Frequency distribution \n of the most common genes in the train dataset") +
+  labs(x = "Gene", y = "Frequency") 
+```
+
+```{r}
+freq_gene_test <- test %>%
+  group_by(Gene) %>%
+  summarise(th = n()) %>%
+  filter(th > 25)
+
+freq_gene_test %>%
+  ggplot(aes(reorder(Gene, -th), th)) +
+  geom_point(size = 3,colour='red') +
+  ggtitle("Frequency distribution \n of the most common genes in the test dataset") +
+  labs(x = "Gene", y = "Frequency")
+```
+
+#From the graphs, we can deduce that the test data contains fewer frequent genes.
+
+#furthermore I wanted to compare the 2 datasets based on variations (types of the mutations) -> I removed the ID column from the test dataset and ID and Class from the train dataset
+
+```{r}
+train_gene_var <- train %>% mutate(dataset = factor("train")) %>% select(-Class, -ID)
+test_gene_var <- test %>% mutate(dataset = factor("test")) %>% select(-ID)
+
+compare_g_v <- full_join(train_gene_var, test_gene_var)
+
+compare_g_v %>%
+  group_by(Variation, dataset) %>%
+  summarise(th = n()) %>%
+  filter(th > 3) %>%
+  ggplot(aes(reorder(Variation, -th), th, colour = dataset)) +
+  geom_point(size = 3) +
+  ggtitle("Comparison of the most frequent mutation types in the 2 datasets") +
+  coord_cartesian(ylim = c(0, 100)) +
+  labs(x = "Variation", y = "Frequency")
+```
